@@ -28,7 +28,7 @@ main::proc()
 
         // Get image values
         w, h, channels: c.int
-        image_values := image.loadf(strings.clone_to_cstring(file_info.fullpath),&w,&h, &channels, 0)
+        image_values := image.loadf(strings.clone_to_cstring(file_info.fullpath),&w,&h, &channels, 4)
         defer image.image_free(image_values)
 
         // Sum all alphas
