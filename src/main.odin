@@ -14,6 +14,7 @@ main::proc()
     rl.InitWindow(2048,1024,"Probability Viz")
     if len(os.args) < 2 {rl.SetTargetFPS(100)}
 
+    // Create job to Update Current Average and Start it
     update_current_average_instance_data := Update_Current_Average_Data{true, 0, 0}
     update_current_average_instance := thread.create(update_current_average_job);
     if update_current_average_instance != nil {
@@ -22,8 +23,11 @@ main::proc()
         thread.start(update_current_average_instance)
     }
 
+    // Setup buffer to append in
     probabilities_buffer := make([dynamic]f32, 0, 1000000)
     defer delete(probabilities_buffer)
+    
+    // Run window
     for !rl.WindowShouldClose() {
         // Update data
         append(&probabilities_buffer, f32(update_current_average_instance_data.current_average))
@@ -45,6 +49,7 @@ main::proc()
         rl.EndDrawing()
     }
 
+    // Clean up
     rl.CloseWindow()
     update_current_average_instance_data.should_run = false
     thread.destroy(update_current_average_instance)
