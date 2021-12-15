@@ -43,8 +43,13 @@ main::proc()
             )
         }
 
-        buf: [32]byte
-        rl.DrawText(strings.unsafe_string_to_cstring(strconv.append_uint(buf[:], update_current_average_instance_data.amount_run,10)), 10, 10, 72, rl.BLUE)
+        str_buffer_amount_run: [32]u8
+        rl.DrawText(strings.unsafe_string_to_cstring(strconv.append_uint(str_buffer_amount_run[:], update_current_average_instance_data.amount_run,10)), 
+            10, 10, 72, rl.BLUE)
+
+        str_buffer_current_average: [22]u8
+        rl.DrawText(transmute(cstring) raw_data(strconv.generic_ftoa(str_buffer_current_average[:], update_current_average_instance_data.current_average,'f', 20, 64)), 
+            10, 100, 72, rl.DARKBLUE)
 
         rl.EndDrawing()
     }
