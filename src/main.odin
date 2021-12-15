@@ -8,10 +8,19 @@ import "core:strings"
 import "core:math"
 import "core:time"
 import "core:os"
+import "core:sys/win32"
+import "core:sys/windows"
 
 main::proc()
 {
     rl.InitWindow(2048,1024,"Probability Viz")
+
+    hinst := win32.Hinstance(win32.get_module_handle_a(nil))
+    hicon := win32.load_icon_a(hinst, "MAINICON")
+    info: win32.Icon_Info
+    win32.get_icon_info(hicon, &info)
+    fmt.println(hinst,hicon,info)
+
     if len(os.args) < 2 {rl.SetTargetFPS(100)}
 
     // Create job to Update Current Average and Start it
@@ -55,7 +64,7 @@ main::proc()
     }
 
     // Clean up
-    rl.CloseWindow()
+    //rl.CloseWindow()
     update_current_average_instance_data.should_run = false
     thread.destroy(update_current_average_instance)
 }
