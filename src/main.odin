@@ -28,9 +28,14 @@ main::proc()
     thread.pool_start(&work_on_image_pool)
     thread.pool_wait_and_process(&work_on_image_pool)
 
+    // Make out dir
+    out_path := strings.concatenate({current_dir, "\\out"})
+    os.make_directory(out_path, 0)
+
     // Write result to file
-    out_file_path := strings.concatenate({current_dir, "\\out\\out.tsv"})
+    out_file_path := strings.concatenate({out_path, "\\out.tsv"})
     handle_file, _ := os.open(out_file_path, os.O_WRONLY|os.O_CREATE)
+
     for result in work_on_image_data.results {
         if result == {} {continue}
         os.write_string(handle_file, result)
