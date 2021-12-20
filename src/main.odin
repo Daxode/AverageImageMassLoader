@@ -64,7 +64,7 @@ main::proc()
         for y in 0..<tile_height {
             for x in 0..<tile_width {
                 image_pixel_index := x*u32(image_channel_count) + y*u32(image_width*image_channel_count)
-                tile_pixel_index := x + y*u32(tile_width*4)
+                tile_pixel_index := x*u32(image_channel_count) + y*u32(tile_width*4)
                 for i in 0..<image_channel_count {
                     my_tile_bytes[tile_pixel_index+u32(i)] = picture_bytes[image_pixel_index+u32(i)]
                 }
@@ -76,6 +76,15 @@ main::proc()
         
         image.image_free(picture_bytes)
     }
+
+    // Remove temp_delete_this_when_done folder
+    temp_path_handle, _ := os.open("temp_delete_this_when_done")
+    file_infos, _ := os.read_dir(temp_path_handle, 0)
+    os.close(temp_path_handle)
+    for file_info in file_infos {
+        os.remove(file_info.fullpath)
+    }
+    os.remove("temp_delete_this_when_done")
 }
 
 // Add: ffmpeg -i %01d.png -vf palettegen=reserve_transparent=1 pal.png // To create palette
