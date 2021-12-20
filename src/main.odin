@@ -14,7 +14,7 @@ main::proc()
     tile_height: u32 = 16
     input_path := "input.png"
     name := "unnammed"
-    frame_rate: u8 = 25
+    frame_rate_str := "25"
     for arg in os.args[1:] {
         switch arg[0] {
             case 'i':
@@ -37,13 +37,12 @@ main::proc()
                     }
                 }
             case 'f':
-                frame_rate_arg, _ := strconv.parse_uint(arg[2:])
-                frame_rate = u8(frame_rate_arg)
+                frame_rate_str = arg[2:]
             case 'n':
                 name = arg[2:]
         }
     }
-    fmt.println(input_path, name, tile_width, tile_height, frame_rate)
+    fmt.println(input_path, name, tile_width, tile_height, frame_rate_str)
 
     // Build png base
     os.make_directory("temp_delete_this_when_done",0)
@@ -57,24 +56,69 @@ main::proc()
 
     // Make tiny pictures from big pictures
     my_tile_bytes := make([]u8, tile_width*tile_height*4)
+    tile_amount_width, tile_amount_height: u32
+
     for info, it in build_base_png_infos {
         image_width, image_height, image_channel_count : libc.int
         picture_bytes := image.load(strings.clone_to_cstring(info.fullpath),&image_width, &image_height, &image_channel_count, 4)
+        tile_amount_width, tile_amount_height = u32(image_width)/tile_width, u32(image_height)/tile_height
 
-        for y in 0..<tile_height {
-            for x in 0..<tile_width {
-                image_pixel_index := x*u32(image_channel_count) + y*u32(image_width*image_channel_count)
-                tile_pixel_index := x*u32(image_channel_count) + y*u32(tile_width*4)
-                for i in 0..<image_channel_count {
-                    my_tile_bytes[tile_pixel_index+u32(i)] = picture_bytes[image_pixel_index+u32(i)]
+        // For every tile
+        for tile_y in 0..<tile_amount_height {
+            tile_y_pixel := tile_y*tile_height
+            tile_y_name_buf: [32]u8
+            tile_y_name := strconv.append_uint(tile_y_name_buf[:], u64(tile_y), 10)
+
+            for tile_x in 0..<tile_amount_width {
+                tile_x_pixel := tile_x*tile_width
+                tile_x_name_buf: [32]u8
+                tile_x_name := strconv.append_uint(tile_x_name_buf[:], u64(tile_x), 10)
+
+                // For every pixel in tile
+                for pixel_y in tile_y_pixel..<min(tile_y_pixel+tile_height, u32(image_height)) {
+                    for pixel_x in tile_x_pixel..<min(tile_x_pixel+tile_width, u32(image_width)) {
+                        image_pixel_index := pixel_x*u32(image_channel_count) + pixel_y*u32(image_width*image_channel_count)
+                        tile_pixel_x, tile_pixel_y := pixel_x%tile_width, pixel_y%tile_height
+                        tile_pixel_index := tile_pixel_x*4+ tile_pixel_y*u32(tile_width*4)
+                        for i in 0..<image_channel_count {
+                            my_tile_bytes[tile_pixel_index+u32(i)] = picture_bytes[image_pixel_index+u32(i)]
+                        }
+                    }
                 }
+
+                // Save tile
+                tile_name := strings.concatenate({"temp_delete_this_when_done/",name,"_",tile_x_name,"_",tile_y_name,"_",info.name[:len(info.name)-4],".png"})
+                image.write_png(strings.clone_to_cstring(tile_name),i32(tile_width),i32(tile_height),4,raw_data(my_tile_bytes),i32(tile_width*4))
             }
         }
-        tile_name_it_buf: [32]u8
-        tile_name := strings.concatenate({"temp_delete_this_when_done/",name,"_0_0_",strconv.append_uint(tile_name_it_buf[:], u64(it), 10),".png"})
-        image.write_png(strings.clone_to_cstring(tile_name),i32(tile_width),i32(tile_height),4,raw_data(my_tile_bytes),i32(tile_width*4))
         
         image.image_free(picture_bytes)
+    }
+
+    // Merge to gif
+    os.make_directory("out",0)
+    for tile_y in 0..<tile_amount_height {
+        tile_y_name_buf: [32]u8
+        tile_y_name := strconv.append_uint(tile_y_name_buf[:], u64(tile_y), 10)
+
+        for tile_x in 0..<tile_amount_width {
+            tile_x_name_buf: [32]u8
+            tile_x_name := strconv.append_uint(tile_x_name_buf[:], u64(tile_x), 10)
+
+            tile_name := strings.concatenate({name,"_",tile_x_name,"_",tile_y_name})
+            tile_ffmpeg_path := strings.concatenate({"temp_delete_this_when_done/",tile_name,"_in%03d.png"})
+            tile_create_palette := strings.concatenate({"ffmpeg -i ",tile_ffmpeg_path," -vf palettegen=reserve_transparent=1 temp_delete_this_when_done/",tile_name,"_pal.png"})
+            tile_create_gif := strings.concatenate({
+                "ffmpeg -framerate ",frame_rate_str,
+                " -i ",tile_ffmpeg_path,
+                " -i temp_delete_this_when_done/",tile_name,"_pal.png",
+                " -lavfi \"paletteuse=alpha_threshold=128,scale=",strconv.append_uint(tile_x_name_buf[:],u64(tile_width),10),":",strconv.append_uint(tile_x_name_buf[:],u64(tile_height),10),"\"",
+                " out/",tile_name,".gif"})
+            fmt.println(tile_create_palette)
+            libc.system(strings.clone_to_cstring(tile_create_palette))
+            fmt.println(tile_create_gif)
+            libc.system(strings.clone_to_cstring(tile_create_gif))
+        }
     }
 
     // Remove temp_delete_this_when_done folder
@@ -87,5 +131,4 @@ main::proc()
     os.remove("temp_delete_this_when_done")
 }
 
-// Add: ffmpeg -i %01d.png -vf palettegen=reserve_transparent=1 pal.png // To create palette
-// Add: ffmpeg -framerate 2 -i %01d.png -i pal.png -lavfi paletteuse=alpha_threshold=128 output.gif // To use palette
+// Add:  // To use palette

@@ -7,7 +7,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/out/debug.exe",
       "preLaunchTask": "Build Debug",
-      "args": ["i:input.gif","s:256,256","f:2","n:happi_man"],
+      "args": ["i:dax.gif","s:100,100","f:60","n:dax"],
       "cwd": "${workspaceFolder}/out", 
     }
   ]
